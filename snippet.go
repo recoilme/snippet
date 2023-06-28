@@ -1,6 +1,7 @@
 package snippet
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,11 +17,7 @@ type item struct {
 	Description string `json:"description"`
 }
 
-func snippet(link string, timeout int, headers map[string]string) (*item, error) {
-	r, err := getLinkReader(link, timeout, headers)
-	if err != nil {
-		return nil, err
-	}
+func SnippetFromReader(r io.ReadCloser) (*item, error) {
 	defer r.Close()
 	tokens := html.NewTokenizer(r)
 	titleFind := false
@@ -73,28 +70,42 @@ func snippet(link string, timeout int, headers map[string]string) (*item, error)
 			break
 		}
 	}
-	r.Close()
 	return it, nil
+}
+
+func Snippet(link string, timeout int, headers map[string]string) (*item, int, error) {
+	r, statusCode, err := GetLinkReader(link, timeout, headers)
+	if err != nil {
+		return nil, statusCode, err
+	}
+	it, err := SnippetFromReader(r)
+	return it, statusCode, err
 }
 
 // getLinkReader return NopCloser from url
 // params are timeout in seconds and headers
 // dont foget to close reader
-func getLinkReader(link string, timeout int, headers map[string]string) (io.ReadCloser, error) {
+func GetLinkReader(link string, timeout int, headers map[string]string) (io.ReadCloser, int, error) {
 	// params
 	defHeaders := make(map[string]string)
 	defHeaders["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0"
 	defHeaders["Accept"] = "text/html,application/xhtml+xml,application/xml,application/rss+xml;q=0.9,image/webp,*/*;q=0.8"
-	defHeaders["Accept-Language"] = "en-US;q=0.7,en;q=0.3"
+	defHeaders["Accept-Language"] = "en-US;q=0.7,ru;q=0.3"
 	if timeout == 0 {
 		timeout = 10
 	}
 	// client
-	client := http.Client{Timeout: time.Duration(timeout) * time.Second}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	client := &http.Client{
+		Timeout:   time.Duration(timeout) * time.Second,
+		Transport: customTransport,
+	}
 	// request
 	req, err := http.NewRequest(http.MethodGet, link, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// headers
 	for k, v := range defHeaders {
@@ -106,16 +117,16 @@ func getLinkReader(link string, timeout int, headers map[string]string) (io.Read
 	// response
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// return
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		utf8, err := charset.NewReader(resp.Body, resp.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, err
+			return nil, resp.StatusCode, err
 		}
-		return io.NopCloser(utf8), err
+		return io.NopCloser(utf8), resp.StatusCode, err
 	}
 
-	return nil, fmt.Errorf("%s: %d", "Error, status code:", resp.StatusCode)
+	return nil, resp.StatusCode, fmt.Errorf("%s: %d", "Error, status code:", resp.StatusCode)
 }
