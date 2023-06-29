@@ -1,7 +1,6 @@
 package snippet
 
 import (
-	"fmt"
 	"io"
 	"testing"
 
@@ -19,7 +18,7 @@ func TestGetReader(t *testing.T) {
 }
 
 func TestSnippet(t *testing.T) {
-	snippet, statusCode, err := Snippet("http://vc.ru", 0, nil)
+	snippet, err := Snippet("http://vc.ru", 0, nil)
 	assert.NoError(t, err)
-	fmt.Println("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nstatusCode:", statusCode)
+	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nstatusCode:", snippet.StatusCode)
 }

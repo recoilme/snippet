@@ -15,8 +15,10 @@ import (
 type item struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	StatusCode  int    `json:"status_code"`
 }
 
+// SnippetFromReader return snippet from io.Reader
 func SnippetFromReader(r io.ReadCloser) (*item, error) {
 	defer r.Close()
 	tokens := html.NewTokenizer(r)
@@ -73,13 +75,16 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 	return it, nil
 }
 
-func Snippet(link string, timeout int, headers map[string]string) (*item, int, error) {
+// Snippet return snippet from url
+// params: timeout (in seconds) and custom http headers
+func Snippet(link string, timeout int, headers map[string]string) (*item, error) {
 	r, statusCode, err := GetLinkReader(link, timeout, headers)
 	if err != nil {
-		return nil, statusCode, err
+		return &item{StatusCode: statusCode}, err
 	}
 	it, err := SnippetFromReader(r)
-	return it, statusCode, err
+	it.StatusCode = statusCode
+	return it, err
 }
 
 // getLinkReader return NopCloser from url
