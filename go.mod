@@ -1,4 +1,4 @@
-module snippet
+module github.com/recoilme/snippet
 
 go 1.19
 
