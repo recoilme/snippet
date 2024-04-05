@@ -24,8 +24,7 @@ type item struct {
 func SnippetFromReader(r io.ReadCloser) (*item, error) {
 	defer r.Close()
 	tokens := html.NewTokenizer(r)
-	//titleFind := false
-	//descriptionFind := false
+	bodyFound := false
 	it := &item{}
 	tags := make([]string, 0, 1)
 	for {
@@ -86,13 +85,15 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 						}
 					}
 				}
+			case "body":
+				bodyFound = true
 			}
 		}
 
 		if len(tags) > 0 {
 			it.Tag = strings.Join(tags, ",")
 		}
-		if err {
+		if err || bodyFound {
 			break
 		}
 	}
