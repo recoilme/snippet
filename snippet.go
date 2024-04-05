@@ -17,6 +17,7 @@ type item struct {
 	Description string `json:"description"`
 	Section     string `json:"section"`
 	Tag         string `json:"tag"`
+	Keywords    string `json:"keywords"`
 	StatusCode  int    `json:"status_code"`
 }
 
@@ -42,7 +43,6 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 					if titleText == html.TextToken {
 						it.Title = strings.TrimSpace(tokens.Token().Data)
 					}
-					//titleFind = true
 				}
 			case "description":
 				if tt == html.StartTagToken {
@@ -50,7 +50,6 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 					if descrText == html.TextToken {
 						it.Description = strings.TrimSpace(tokens.Token().Data)
 					}
-					//descriptionFind = true//? search untip meta or stop?
 				}
 			case "meta":
 				for _, attr := range tkn.Attr {
@@ -62,7 +61,15 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 									break
 								}
 							}
-							//descriptionFind = true
+							break
+						}
+						if strings.ToLower(attr.Val) == "keywords" {
+							for _, attr := range tkn.Attr {
+								if attr.Key == "content" {
+									it.Keywords = strings.TrimSpace(attr.Val)
+									break
+								}
+							}
 							break
 						}
 					}

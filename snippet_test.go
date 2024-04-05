@@ -26,5 +26,11 @@ func TestSnippet(t *testing.T) {
 func TestSnippetMeta(t *testing.T) {
 	snippet, err := Snippet("https://vc.ru/hr/1110372", 0, nil)
 	assert.NoError(t, err)
-	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nSection:", snippet.Section, "\nTag:", snippet.Tag, "\nstatusCode:", snippet.StatusCode)
+	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nSection:", snippet.Section, "\nTag:", snippet.Tag, "\nKeywords:", snippet.Keywords, "\nstatusCode:", snippet.StatusCode)
+}
+
+func TestSnippetMetaKeywords(t *testing.T) {
+	snippet, err := Snippet("https://habr.com/ru/news/805597/", 0, nil)
+	assert.NoError(t, err)
+	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nSection:", snippet.Section, "\nTag:", snippet.Tag, "\nKeywords:", snippet.Keywords, "\nstatusCode:", snippet.StatusCode)
 }
