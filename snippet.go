@@ -15,6 +15,8 @@ import (
 type item struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Section     string `json:"section"`
+	Tag         string `json:"tag"`
 	StatusCode  int    `json:"status_code"`
 }
 
@@ -22,9 +24,10 @@ type item struct {
 func SnippetFromReader(r io.ReadCloser) (*item, error) {
 	defer r.Close()
 	tokens := html.NewTokenizer(r)
-	titleFind := false
-	descriptionFind := false
+	//titleFind := false
+	//descriptionFind := false
 	it := &item{}
+	tags := make([]string, 0, 1)
 	for {
 		tt := tokens.Next()
 		err := false
@@ -40,7 +43,7 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 					if titleText == html.TextToken {
 						it.Title = strings.TrimSpace(tokens.Token().Data)
 					}
-					titleFind = true
+					//titleFind = true
 				}
 			case "description":
 				if tt == html.StartTagToken {
@@ -60,15 +63,36 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 									break
 								}
 							}
-							descriptionFind = true
+							//descriptionFind = true
 							break
+						}
+					}
+					if attr.Key == "property" {
+						if strings.ToLower(attr.Val) == "article:section" {
+							for _, attr := range tkn.Attr {
+								if attr.Key == "content" {
+									it.Section = strings.TrimSpace(attr.Val)
+									break
+								}
+							}
+						}
+						if strings.ToLower(attr.Val) == "article:tag" {
+							for _, attr := range tkn.Attr {
+								if attr.Key == "content" {
+									tags = append(tags, strings.TrimSpace(attr.Val))
+									break
+								}
+							}
 						}
 					}
 				}
 			}
 		}
 
-		if (titleFind && descriptionFind) || err {
+		if len(tags) > 0 {
+			it.Tag = strings.Join(tags, ",")
+		}
+		if err {
 			break
 		}
 	}
@@ -78,7 +102,7 @@ func SnippetFromReader(r io.ReadCloser) (*item, error) {
 // Snippet return snippet from url
 // params: timeout (in seconds) and custom http headers
 func Snippet(link string, timeout int, headers map[string]string) (*item, error) {
-	r, statusCode, err := GetLinkReader(link, timeout, headers)
+	r, statusCode, err := GetLinkReader(link, timeout, headers, 0)
 	if err != nil {
 		return &item{StatusCode: statusCode}, err
 	}
@@ -90,8 +114,12 @@ func Snippet(link string, timeout int, headers map[string]string) (*item, error)
 // getLinkReader return NopCloser from url
 // params are timeout in seconds and headers
 // dont foget to close reader
-func GetLinkReader(link string, timeout int, headers map[string]string) (io.ReadCloser, int, error) {
+func GetLinkReader(link string, timeout int, headers map[string]string, maxSizeInt int) (io.ReadCloser, int, error) {
 	// params
+	maxSize := int64(maxSizeInt)
+	if maxSizeInt <= 0 {
+		maxSize = int64(300 * 1024) // 300 килобайт в байтах
+	}
 	defHeaders := make(map[string]string)
 	defHeaders["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0"
 	defHeaders["Accept"] = "text/html,application/xhtml+xml,application/xml,application/rss+xml;q=0.9,image/webp,*/*;q=0.8"
@@ -130,7 +158,8 @@ func GetLinkReader(link string, timeout int, headers map[string]string) (io.Read
 		if err != nil {
 			return nil, resp.StatusCode, err
 		}
-		return io.NopCloser(utf8), resp.StatusCode, err
+		limitedReader := io.LimitReader(utf8, maxSize)
+		return io.NopCloser(limitedReader), resp.StatusCode, err
 	}
 
 	return nil, resp.StatusCode, fmt.Errorf("%s: %d", "Error, status code:", resp.StatusCode)

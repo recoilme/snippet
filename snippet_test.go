@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetReader(t *testing.T) {
-	r, statusCode, err := GetLinkReader("http://vc.ru", 0, nil)
+	r, statusCode, err := GetLinkReader("http://vc.ru", 0, nil, 0)
 	assert.NoError(t, err)
 	defer r.Close()
 
@@ -18,7 +18,13 @@ func TestGetReader(t *testing.T) {
 }
 
 func TestSnippet(t *testing.T) {
-	snippet, err := Snippet("http://vc.ru", 0, nil)
+	snippet, err := Snippet("https://vc.ru/", 0, nil)
 	assert.NoError(t, err)
 	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nstatusCode:", snippet.StatusCode)
+}
+
+func TestSnippetMeta(t *testing.T) {
+	snippet, err := Snippet("https://vc.ru/hr/1110372", 0, nil)
+	assert.NoError(t, err)
+	t.Log("Title:", snippet.Title, "\nDescription:", snippet.Description, "\nSection:", snippet.Section, "\nTag:", snippet.Tag, "\nstatusCode:", snippet.StatusCode)
 }
